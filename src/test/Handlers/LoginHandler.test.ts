@@ -30,6 +30,7 @@ describe("Login Handler test suite", () => {
     );
 
     Utils.getRequestBody = getRequestBodyMock;
+    requestMock.method = HTTP_METHODS.POST;
   });
 
   afterEach(() => {
@@ -57,7 +58,6 @@ describe("Login Handler test suite", () => {
   });
 
   test("post request with valid login", async () => {
-    requestMock.method = HTTP_METHODS.POST;
     getRequestBodyMock.mockReturnValueOnce({
       username: "SomeUser",
       password: "password",
@@ -69,5 +69,25 @@ describe("Login Handler test suite", () => {
       "Content-Type": "application/json",
     });
     expect(responseMock.write).toBeCalledWith(JSON.stringify(someSessionToken));
+  });
+
+  test("post request with invalid login", async () => {
+    getRequestBodyMock.mockReturnValueOnce({
+      username: "SomeUser",
+      password: "password",
+    });
+    authorizeMock.generateToken.mockReturnValueOnce(null);
+    await loginHandler.handleRequest();
+    expect(responseMock.statusCode).toBe(HTTP_CODES.NOT_fOUND);
+    expect(responseMock.write).toBeCalledWith("wrong username or password");
+  });
+
+  test("post request with unexpected error", async () => {
+    getRequestBodyMock.mockRejectedValueOnce(new Error("Something went wrong"));
+    await loginHandler.handleRequest();
+    expect(responseMock.statusCode).toBe(HTTP_CODES.INTERNAL_SERVER_ERROR);
+    expect(responseMock.write).toBeCalledWith(
+      "Internal error: Something went wrong"
+    );
   });
 });
